@@ -1,0 +1,7 @@
+:root {
+  --my-var: red;
+  --z-my-better-var: z-stack(24);
+  --z-code-red: z-stack();
+  --z-under: z-under(var(--z-my-better-var));
+  --z-twelve: var(--z-code-red);
+}

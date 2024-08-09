@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Stacking Context Tracker</title>
+  <style>
+    .test-element {
+      width: 200px;
+      height: 200px;
+      background-color: #e0e0e0;
+      margin: 20px;
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <div id="element1" class="test-element">Element 1</div>
+    <div id="element2" class="test-element">Element 2</div>
+  </div>
+  <button onclick="applyStyle('element1', 'opacity', '0.5')">Make Element 1 Opacity 0.5</button>
+  <button onclick="applyStyle('element1', 'position', 'relative', '2')">Make Element 1 Position
+    Relative, Z-Index 2</button>
+  <button onclick="applyStyle('element2', 'transform', 'rotate(45deg')">Rotate Element 2</button>
+  <button onclick="applyStyle('element2', 'filter', 'blur(5px')">Blur Element 2</button>
+
+  <script>
+    const stackingContexts = {
+      contexts: {},
+      addContext(id, element) {
+        if (!this.contexts[id]) {
+          this.contexts[id] = element;
+          console.log(`Added new stacking context: ${id}`);
+        } else {
+          console.log(`Stacking context ${id} already exists.`);
+        }
+      },
+      removeContext(id) {
+        if (this.contexts[id]) {
+          delete this.contexts[id];
+          console.log(`Removed stacking context: ${id}`);
+        } else {
+          console.log(`Stacking context ${id} not found.`);
+        }
+      },
+      listContexts() {
+        console.log('Current Stacking Contexts:', Object.keys(this.contexts));
+      }
+    };
+
+    function isStackingContext(element) {
+      const style = window.getComputedStyle(element);
+      return (
+        (style.position !== 'static' && style.zIndex !== 'auto') ||
+        element === document.documentElement ||
+        style.position === 'fixed' ||
+        style.position === 'sticky' ||
+        style.transform !== 'none' ||
+        style.filter !== 'none' ||
+        parseFloat(style.opacity) < 1 ||
+        style.clipPath !== 'none' ||
+        style.maskImage !== 'none' ||
+        style.maskBorder !== 'none' ||
+        style.perspective !== 'none' ||
+        style.isolation === 'isolate' ||
+        style.backfaceVisibility === 'hidden' ||
+        style.willChange.includes('transform', 'opacity', 'filter', 'perspective', 'clip-path', 'mask', 'maskImage', 'maskBorder', 'position', 'zIndex') ||
+        (style.overflow !== 'visible' || style.overflowX !== 'visible' || style.overflowY !== 'visible')
+      );
+    }
+
+    function setupGlobalStackingContextObserver() {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+          if (mutation.type === 'attributes') {
+            const target = mutation.target;
+            const id = target.id || `unnamed-${Date.now()}`;
+            if (isStackingContext(target)) {
+              stackingContexts.addContext(id, target);
+            } else {
+              stackingContexts.removeContext(id);
+            }
+          }
+        });
+        stackingContexts.listContexts(); // Log the current stacking contexts
+      });
+
+      const config = {
+        attributes: true,
+        childList: false,
+        subtree: true,
+        attributeFilter: ['style', 'class']
+      };
+
+      observer.observe(document.body, config);
+    }
+
+    function applyStyle(elementId, property, value) {
+      const element = document.getElementById(elementId);
+      element.style[property] = value;
+    }
+
+    // Initialize the global observer
+    setupGlobalStackingContextObserver();
+  </script>
+</body>
+
+</html>
