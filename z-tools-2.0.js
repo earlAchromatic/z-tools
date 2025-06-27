@@ -48,7 +48,7 @@ function hasChildWithZIndex(element) {
 
 function createsStackingContext(element) {
   const style = window.getComputedStyle(element);
-  let contextProperties = {};
+  const contextProperties = {};
   let isContext = false;
   const isRoot = element === document.documentElement;
 
@@ -56,113 +56,157 @@ function createsStackingContext(element) {
     contextProperties['root-element'] = true;
   }
 
-  const normalizeStyleValue = (value) => value === '' ? 'none' : value;
+  const normalize = val => val === '' ? 'none' : val;
+
+  const valueMap = {
+    position: style.position,
+    zIndex: style.zIndex,
+    containerType: style.containerType,
+    opacity: style.opacity,
+    mixBlendMode: normalize(style.mixBlendMode),
+    transform: normalize(style.transform),
+    scale: normalize(style.scale),
+    rotate: normalize(style.rotate),
+    translate: normalize(style.translate),
+    filter: normalize(style.filter),
+    backdropFilter: normalize(style.backdropFilter),
+    perspective: normalize(style.perspective),
+    clipPath: normalize(style.clipPath),
+    mask: normalize(style.mask),
+    maskImage: normalize(style.maskImage),
+    maskBorder: normalize(style.maskBorder),
+    isolation: style.isolation,
+    contain: style.contain,
+    willChange: style.willChange
+  };
+
+  const isZIndexValid = normalize(valueMap.zIndex) !== 'auto';
 
   const stackingConditions = [
     {
       name: "position/z-index",
-      condition: ['absolute', 'relative'].includes(style.position) && normalizeStyleValue(style.zIndex) !== 'auto',
-      property: style => ({ position: style.position, 'z-index': Number(style.zIndex) })
+      condition: ['absolute', 'relative'].includes(valueMap.position) && isZIndexValid,
+      property: { position: valueMap.position, 'z-index': Number(valueMap.zIndex) }
     },
     {
       name: "position",
-      condition: ['fixed', 'sticky'].includes(style.position),
-      property: style => ({ position: style.position })
+      condition: ['fixed', 'sticky'].includes(valueMap.position),
+      property: { position: valueMap.position }
     },
     {
       name: "container-type",
-      condition: ['size', 'inline-size'].includes(style.containerType),
-      property: style => ({ "container-type": style.containerType })
+      condition: ['size', 'inline-size'].includes(valueMap.containerType),
+      property: { 'container-type': valueMap.containerType }
     },
     {
       name: "opacity",
-      condition: parseFloat(style.opacity) < 1,
-      property: style => ({ opacity: style.opacity })
+      condition: parseFloat(valueMap.opacity) < 1,
+      property: { opacity: valueMap.opacity }
     },
     {
       name: "mix-blend-mode",
-      condition: normalizeStyleValue(style.mixBlendMode) !== 'normal',
-      property: style => ({ 'mix-blend-mode': style.mixBlendMode })
+      condition: valueMap.mixBlendMode !== 'normal',
+      property: { 'mix-blend-mode': valueMap.mixBlendMode }
     },
     {
       name: "transform",
-      condition: normalizeStyleValue(style.transform) !== 'none',
-      property: style => ({ transform: style.transform })
+      condition: valueMap.transform !== 'none',
+      property: { transform: valueMap.transform }
     },
     {
       name: "scale",
-      condition: normalizeStyleValue(style.scale) !== 'none',
-      property: style => ({ scale: style.scale })
+      condition: valueMap.scale !== 'none',
+      property: { scale: valueMap.scale }
     },
     {
       name: "rotate",
-      condition: normalizeStyleValue(style.rotate) !== 'none',
-      property: style => ({ rotate: style.rotate })
+      condition: valueMap.rotate !== 'none',
+      property: { rotate: valueMap.rotate }
     },
     {
       name: "translate",
-      condition: normalizeStyleValue(style.translate) !== 'none',
-      property: style => ({ translate: style.translate })
+      condition: valueMap.translate !== 'none',
+      property: { translate: valueMap.translate }
     },
     {
       name: "filter",
-      condition: normalizeStyleValue(style.filter) !== 'none',
-      property: style => ({ filter: style.filter })
+      condition: valueMap.filter !== 'none',
+      property: { filter: valueMap.filter }
     },
     {
       name: "backdrop-filter",
-      condition: normalizeStyleValue(style.backdropFilter) !== 'none',
-      property: style => ({ 'backdrop-filter': style.backdropFilter })
+      condition: valueMap.backdropFilter !== 'none',
+      property: { 'backdrop-filter': valueMap.backdropFilter }
     },
-    // TODO: Backface-visibility
     {
       name: "perspective",
-      condition: normalizeStyleValue(style.perspective) !== 'none',
-      property: style => ({ perspective: style.perspective })
+      condition: valueMap.perspective !== 'none',
+      property: { perspective: valueMap.perspective }
     },
     {
       name: "clip-path",
-      condition: normalizeStyleValue(style.clipPath) !== 'none',
-      property: style => ({ 'clip-path': style.clipPath })
+      condition: valueMap.clipPath !== 'none',
+      property: { 'clip-path': valueMap.clipPath }
     },
     {
-      name: "mask/mask-image/mask-border",
-      condition: normalizeStyleValue(style.mask) !== 'none' || normalizeStyleValue(style.maskImage) !== 'none' || (normalizeStyleValue(style.maskBorder) !== 'none' && normalizeStyleValue(style.maskBorder) !== undefined),
-      property: style => ({ mask: style.mask, 'mask-image': style.maskImage, 'mask-border': style.maskBorder })
+      name: "mask",
+      condition:
+        valueMap.mask !== 'none' ||
+        valueMap.maskImage !== 'none' ||
+        (valueMap.maskBorder !== 'none' && valueMap.maskBorder !== undefined),
+      property: {
+        mask: valueMap.mask,
+        'mask-image': valueMap.maskImage,
+        'mask-border': valueMap.maskBorder
+      }
     },
     {
       name: "isolation",
-      condition: style.isolation === 'isolate',
-      property: style => ({ isolation: style.isolation })
+      condition: valueMap.isolation === 'isolate',
+      property: { isolation: valueMap.isolation }
     },
     {
       name: "contain",
-      condition: style.contain.match(/paint|layout|strict|content/),
-      property: style => ({ contain: style.contain })
+      condition: /paint|layout|strict|content/.test(valueMap.contain),
+      property: { contain: valueMap.contain }
     },
     {
       name: "flex-or-grid-child",
-      condition: isChildOfDisplayTypeGridOrFlex(element) && normalizeStyleValue(style.zIndex) !== 'auto',
-      property: style => ({ ...isChildOfDisplayTypeGridOrFlex(element), 'z-index': Number(style.zIndex) })
+      condition: isZIndexValid && isChildOfDisplayTypeGridOrFlex(element),
+      property: {
+        ...isChildOfDisplayTypeGridOrFlex(element),
+        'z-index': Number(valueMap.zIndex)
+      }
     }
   ];
 
-  const willChangeProperties = stackingConditions.flatMap(cond => cond.name.split('/').map(prop => prop.trim()));
+  const knownProps = new Set(
+    stackingConditions.flatMap(({ name }) => name.split('/').map(p => p.trim()))
+  );
 
-  stackingConditions.push({
-    name: "will-change",
-    condition: style.willChange.split(', ').some(prop => willChangeProperties.includes(prop.trim())),
-    property: style => ({ 'will-change': style.willChange })
-  });
+  // Add will-change check
+  if (valueMap.willChange) {
+    const willChangeProps = valueMap.willChange.split(',').map(p => p.trim());
+    if (willChangeProps.some(p => knownProps.has(p))) {
+      stackingConditions.push({
+        name: "will-change",
+        condition: true,
+        property: { 'will-change': valueMap.willChange }
+      });
+    }
+  }
 
-  stackingConditions.forEach(({ condition, property }) => {
+  for (const { condition, property } of stackingConditions) {
     if (condition) {
       isContext = true;
-      Object.assign(contextProperties, property(style));
+      Object.assign(contextProperties, property);
     }
-  });
+  }
 
-  return { isContext: isRoot || (isContext && hasChildWithZIndex(element)), properties: contextProperties };
+  return {
+    isContext: isRoot || (isContext && hasChildWithZIndex(element)),
+    properties: contextProperties
+  };
 }
 
 function checkForStackingContexts(node) {
