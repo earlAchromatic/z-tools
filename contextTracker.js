@@ -1,9 +1,9 @@
 const stackingContexts = {
-  contexts: {}, // Stores elements and their details
+  contexts: new Map(), // Map to store name-element pairs
 
   addContext(name, element) {
-    if (!this.contexts[name]) {
-      this.contexts[name] = element;
+    if (!this.contexts.has(name)) {
+      this.contexts.set(name, element);
       console.log(`Added new stacking context: ${name}`);
     } else {
       console.log(`Stacking context ${name} already exists.`);
@@ -11,8 +11,8 @@ const stackingContexts = {
   },
 
   removeContext(name) {
-    if (this.contexts[name]) {
-      delete this.contexts[name];
+    if (this.contexts.has(name)) {
+      this.contexts.delete(name);
       console.log(`Removed stacking context: ${name}`);
     } else {
       console.log(`Stacking context ${name} not found.`);
@@ -20,13 +20,6 @@ const stackingContexts = {
   },
 
   getContext(name) {
-    return this.contexts[name];
+    return this.contexts.get(name);
   }
 };
-
-
-
-// Later, to stop observing
-// stopObserving();
-
-

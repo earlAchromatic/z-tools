@@ -1,24 +1,33 @@
-import fs from 'fs'
+import fs from 'fs';
 
-const processed = Symbol('processed')
+const processed = Symbol('processed');
 
 export default (opts = {}) => {
-  const zCollection = Object.create(null)
+  const zCollection = Object.create(null);
+  const outputPath = opts.outputPath || './zIndices.js';
+
   return {
-    postcssPlugin: 'PLUGIN NAME',
-    Declaration: decl => {
+    postcssPlugin: 'postcss-z-index-exporter',
+
+    Declaration(decl) {
       if (decl.prop.startsWith('--z-') && !decl[processed]) {
-        zCollection[decl.prop] = decl.value
-        decl[processed] = true
+        zCollection[decl.prop] = decl.value.trim();
+        decl[processed] = true;
       }
     },
+
     OnceExit() {
-      let outputString = `export default {\n`
-      for (const [key, value] of Object.entries(zCollection)) {
-        outputString += `"${key}": ${Number.isInteger(Number(value)) ? value : '"' + value.trim() + '"'},\n`
-      }
-      outputString += '\n};'
-      fs.writeFileSync('./zIndices.js', outputString)
+      const entries = Object.entries(zCollection)
+        .map(([key, value]) => {
+          const numericValue = Number(value);
+          const safeValue = Number.isFinite(numericValue) && value === String(numericValue)
+            ? numericValue
+            : JSON.stringify(value);
+          return `  "${key}": ${safeValue}`;
+        });
+
+      const outputString = `export default {\n${entries.join(',\n')}\n};\n`;
+      fs.writeFileSync(outputPath, outputString);
     }
-  }
+  };
 }
