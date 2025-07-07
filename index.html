@@ -72,22 +72,6 @@
       );
     }
 
-    function setupGlobalStackingContextObserver() {
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach(mutation => {
-          if (mutation.type === 'attributes') {
-            const target = mutation.target;
-            const id = target.id || `unnamed-${Date.now()}`;
-            if (isStackingContext(target)) {
-              stackingContexts.addContext(id, target);
-            } else {
-              stackingContexts.removeContext(id);
-            }
-          }
-        });
-        stackingContexts.listContexts(); // Log the current stacking contexts
-      });
-
       const config = {
         attributes: true,
         childList: false,
@@ -102,9 +86,6 @@
       const element = document.getElementById(elementId);
       element.style[property] = value;
     }
-
-    // Initialize the global observer
-    setupGlobalStackingContextObserver();
   </script>
 </body>
 
